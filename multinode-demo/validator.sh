@@ -10,7 +10,7 @@ args=(
   --max-genesis-archive-unpacked-size 1073741824
 )
 airdrops_enabled=1
-node_sol=500 # 500 SAFE: number of SAFE to airdrop the node for transaction fees and vote account rent exemption (ignored if airdrops_enabled=0)
+node_safe=500 # 500 SAFE: number of SAFE to airdrop the node for transaction fees and vote account rent exemption (ignored if airdrops_enabled=0)
 label=
 identity=
 vote_account=
@@ -34,7 +34,7 @@ OPTIONS:
   --init-complete-file FILE - create this file, if it doesn't already exist, once node initialization is complete
   --label LABEL             - Append the given label to the configuration files, useful when running
                               multiple validators in the same workspace
-  --node-sol SAFE            - Number of SAFE this node has been funded from the genesis config (default: $node_sol)
+  --node-safe SAFE            - Number of SAFE this node has been funded from the genesis config (default: $node_safe)
   --no-voting               - start node without vote signer
   --rpc-port port           - custom RPC port for this node
   --no-restart              - do not restart the node if it exits
@@ -54,8 +54,8 @@ while [[ -n $1 ]]; do
     elif [[ $1 = --no-restart ]]; then
       no_restart=1
       shift
-    elif [[ $1 = --node-sol ]]; then
-      node_sol="$2"
+    elif [[ $1 = --node-safe ]]; then
+      node_safe="$2"
       shift 2
     elif [[ $1 = --no-airdrop ]]; then
       airdrops_enabled=0
@@ -262,12 +262,12 @@ trap 'kill_node_and_exit' INT TERM ERR
 wallet() {
   (
     set -x
-    $solana_cli --keypair "$identity" --url "$rpc_url" "$@"
+    $safecoin_cli --keypair "$identity" --url "$rpc_url" "$@"
   )
 }
 
 setup_validator_accounts() {
-  declare node_sol=$1
+  declare node_safe=$1
 
   if [[ -n "$SKIP_ACCOUNTS_CREATION" ]]; then
     return 0
@@ -275,10 +275,10 @@ setup_validator_accounts() {
 
   if ! wallet vote-account "$vote_account"; then
     if ((airdrops_enabled)); then
-      echo "Adding $node_sol to validator identity account:"
+      echo "Adding $node_safe to validator identity account:"
       (
         set -x
-        $solana_cli --keypair "$SAFECOIN_CONFIG_DIR/faucet.json" --url "$rpc_url" transfer "$identity" "$node_sol"
+        $safecoin_cli --keypair "$SAFECOIN_CONFIG_DIR/faucet.json" --url "$rpc_url" transfer "$identity" "$node_safe"
       ) || return $?
     fi
 
@@ -295,10 +295,10 @@ setup_validator_accounts() {
 
 rpc_url=$($safecoin_gossip rpc-url --timeout 180 --entrypoint "$gossip_entrypoint")
 
-[[ -r "$identity" ]] || $solana_keygen new --no-passphrase -so "$identity"
-[[ -r "$vote_account" ]] || $solana_keygen new --no-passphrase -so "$vote_account"
+[[ -r "$identity" ]] || $safecoin_keygen new --no-passphrase -so "$identity"
+[[ -r "$vote_account" ]] || $safecoin_keygen new --no-passphrase -so "$vote_account"
 
-setup_validator_accounts "$node_sol"
+setup_validator_accounts "$node_safe"
 
 while true; do
   echo "$PS4$program ${args[*]}"
